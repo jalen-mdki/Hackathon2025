@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('report_uploads', function (Blueprint $table) {
             $table->id();
-            $table->foreignUuid('report_id')->constrained('reports')->cascadeOnDelete();
+            $table->foreignId('report_id')->constrained('reports')->cascadeOnDelete();
             $table->string('file_url');
             $table->string('file_type');
             $table->string('uploaded_by')->nullable();

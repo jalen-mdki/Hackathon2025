@@ -12,15 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('reports', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            $table->id();
             $table->string('report_type');
             $table->string('incident_type')->nullable();
             $table->text('description');
             $table->date('date_of_incident');
-            $table->decimal('location_lat', 10, 7);
-            $table->decimal('location_long', 10, 7);
-            $table->string('severity');
-            $table->string('industry');
+            $table->decimal('location_lat', 10, 7)->nullable();
+            $table->decimal('location_long', 10, 7)->nullable();
+            $table->string('severity')->nullable();
+            $table->string('industry')->nullable();
             $table->string('reporter_name')->nullable();
             $table->string('reporter_contact')->nullable();
             $table->string('status')->default('Pending');

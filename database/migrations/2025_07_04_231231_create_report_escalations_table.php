@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('report_escalations', function (Blueprint $table) {
             $table->id();
-            $table->foreignUuid('report_id')->constrained('reports')->cascadeOnDelete();
+            $table->foreignId('report_id')->constrained('reports')->cascadeOnDelete();
             $table->foreignId('escalated_by_user_id')->constrained('users')->cascadeOnDelete();
             $table->text('escalation_reason');
             $table->timestamp('escalated_at');
