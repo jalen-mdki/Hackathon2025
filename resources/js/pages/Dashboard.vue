@@ -203,24 +203,49 @@ const severityBreakdownData = computed(() => {
 
 // Enhanced metrics calculations
 const totalReports = computed(() => {
-    return reportStatusData.value.datasets[0].data.reduce((a, b) => a + b, 0);
+    const data = reportStatusData.value.datasets[0].data;
+    // Ensure we have valid data and filter out any non-numeric values
+    const validData = data.filter(item => typeof item === 'number' && !isNaN(item));
+    return validData.reduce((a, b) => a + b, 0);
 });
 
 const unresolvedPercentage = computed(() => {
     const data = reportStatusData.value.datasets[0].data;
-    const unresolved = data[1] + data[2]; // In Progress + Pending
-    return Math.round((unresolved / totalReports.value) * 100);
+    // Safely get values with fallback to 0
+    const inProgress = data[1] || 0;
+    const pending = data[2] || 0;
+    const unresolved = inProgress + pending;
+    
+    // Check if totalReports is valid and not zero
+    const total = totalReports.value;
+    if (!total || total === 0) {
+        return 0;
+    }
+    
+    const percentage = Math.round((unresolved / total) * 100);
+    console.log('Testing - Unresolved:', unresolved, 'Total:', total, 'Percentage:', percentage);
+    return percentage;
 });
 
 const trainingCompletionRate = computed(() => {
-    const completed = trainingStatusData.value.datasets[0].data[0];
-    const total = trainingStatusData.value.datasets[0].data.reduce((a, b) => a + b, 0);
+    const data = trainingStatusData.value.datasets[0].data;
+    if (!data || data.length === 0) return 0;
+    
+    const completed = data[0] || 0;
+    const total = data.filter(item => typeof item === 'number' && !isNaN(item)).reduce((a, b) => a + b, 0);
+    
+    if (total === 0) return 0;
     return Math.round((completed / total) * 100);
 });
 
 const highRiskPercentage = computed(() => {
-    const highRisk = hazardsByRiskData.value.datasets[0].data[0];
-    const total = hazardsByRiskData.value.datasets[0].data.reduce((a, b) => a + b, 0);
+    const data = hazardsByRiskData.value.datasets[0].data;
+    if (!data || data.length === 0) return 0;
+    
+    const highRisk = data[0] || 0;
+    const total = data.filter(item => typeof item === 'number' && !isNaN(item)).reduce((a, b) => a + b, 0);
+    
+    if (total === 0) return 0;
     return Math.round((highRisk / total) * 100);
 });
 
@@ -228,19 +253,35 @@ const highRiskPercentage = computed(() => {
 const mostCommonReportType = computed(() => {
     const data = reportTypeData.value.datasets[0].data;
     const labels = reportTypeData.value.labels;
-    const maxIndex = data.indexOf(Math.max(...data));
-    return labels[maxIndex];
+    
+    if (!data || !labels || data.length === 0 || labels.length === 0) {
+        return 'N/A';
+    }
+    
+    const maxValue = Math.max(...data.filter(item => typeof item === 'number' && !isNaN(item)));
+    const maxIndex = data.indexOf(maxValue);
+    
+    return labels[maxIndex] || 'N/A';
 });
 
 const mostCommonIncidentType = computed(() => {
     const data = incidentTypeData.value.datasets[0].data;
     const labels = incidentTypeData.value.labels;
-    const maxIndex = data.indexOf(Math.max(...data));
-    return labels[maxIndex];
+    
+    if (!data || !labels || data.length === 0 || labels.length === 0) {
+        return 'N/A';
+    }
+    
+    const maxValue = Math.max(...data.filter(item => typeof item === 'number' && !isNaN(item)));
+    const maxIndex = data.indexOf(maxValue);
+    
+    return labels[maxIndex] || 'N/A';
 });
 
 const criticalIncidentCount = computed(() => {
     const data = severityBreakdownData.value.datasets[0].data;
+    if (!data || data.length === 0) return 0;
+    
     return data[0] || 0; // First item is Critical
 });
 
@@ -364,7 +405,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Dashboard Analytics" />
+    <Head title="Safety Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -383,8 +424,132 @@ onMounted(() => {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
                                 </div>
+
+            <!-- Filters Section -->
+            <div class="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                                </svg>
+                                <span class="font-medium text-slate-700 dark:text-slate-300">Filters:</span>
+                            </div>
+                            
+                            <!-- Filter Summary -->
+                            <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span class="text-sm font-medium text-blue-700 dark:text-blue-300">{{ getFilterSummary }}</span>
+                            </div>
+
+                            <!-- Quick Filters -->
+                            <div class="flex items-center gap-2">
+                                <button @click="selectedMonth = 'all'; applyFilters()" 
+                                        :class="selectedMonth === 'all' ? 'bg-blue-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                        class="px-3 py-1 rounded-lg text-sm font-medium transition-colors hover:bg-blue-600 hover:text-white">
+                                    All Time
+                                </button>
+                                <button @click="selectedMonth = String(new Date().getMonth() + 1).padStart(2, '0'); applyFilters()"
+                                        :class="selectedMonth === String(new Date().getMonth() + 1).padStart(2, '0') ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                        class="px-3 py-1 rounded-lg text-sm font-medium transition-colors hover:bg-emerald-600 hover:text-white">
+                                    This Month
+                                </button>
+                                <button @click="selectedMonth = String(new Date().getMonth()).padStart(2, '0'); applyFilters()"
+                                        :class="selectedMonth === String(new Date().getMonth()).padStart(2, '0') ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                        class="px-3 py-1 rounded-lg text-sm font-medium transition-colors hover:bg-amber-600 hover:text-white">
+                                    Last Month
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <!-- Advanced Filters Toggle -->
+                            <button @click="showFilters = !showFilters"
+                                    class="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-slate-700 dark:text-slate-300 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Advanced Filters</span>
+                                <svg :class="showFilters ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Export Button -->
+                            <button class="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Export</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Filters Panel -->
+                    <div v-show="showFilters" class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <!-- Year Filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Year</label>
+                                <select v-model="selectedYear" 
+                                        class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+                                </select>
+                            </div>
+
+                            <!-- Month Filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Month</label>
+                                <select v-model="selectedMonth" 
+                                        class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option v-for="month in availableMonths" :key="month.value" :value="month.value">{{ month.label }}</option>
+                                </select>
+                            </div>
+
+                            <!-- Department Filter (placeholder) -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Department</label>
+                                <select class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="all">All Departments</option>
+                                    <option value="manufacturing">Manufacturing</option>
+                                    <option value="warehouse">Warehouse</option>
+                                    <option value="office">Office</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+
+                            <!-- Risk Level Filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Risk Level</label>
+                                <select class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="all">All Levels</option>
+                                    <option value="high">High Risk</option>
+                                    <option value="medium">Medium Risk</option>
+                                    <option value="low">Low Risk</option>
+                                </select>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex flex-col gap-2">
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Actions</label>
+                                <button @click="applyFilters"
+                                        class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                                    Apply Filters
+                                </button>
+                                <button @click="resetFilters"
+                                        class="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium transition-colors">
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
                                 <div>
-                                    <h1 class="text-4xl font-bold text-white">Dashboard Analytics</h1>
+                                    <h1 class="text-4xl font-bold text-white">Safety Command Center</h1>
                                     <p class="text-blue-100 text-lg mt-2">Real-time safety monitoring and analytics</p>
                                 </div>
                             </div>
