@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Report;
 use App\Models\Organization;
+use App\Models\ReportUploads;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -133,27 +134,57 @@ class ReportController extends Controller
             'location_long' => 'nullable|numeric|between:-180,180',
             'cause_of_death' => 'nullable|string|max:255',
             'regulation_class_broken' => 'nullable|string|max:255',
+            'assigned_to' => 'nullable|exists:users,id',
             'attachments' => 'nullable|array',
-            'attachments.*' => 'file|mimes:jpg,jpeg,png,gif,pdf,doc,docx|max:10240', // 10MB max
+            'attachments.*' => 'file|mimes:jpg,jpeg,png,gif,webp,bmp,tiff,mp4,webm,ogg,avi,mov,wmv,flv,mkv,pdf,doc,docx|max:102400', // 100MB max per file
         ]);
+
+        // Remove attachments from validated data as we'll handle them separately
+        $attachmentFiles = $validated['attachments'] ?? [];
+        unset($validated['attachments']);
 
         $report = Report::create($validated);
 
-        // Handle file uploads
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('report-attachments', 'public');
+         // Handle multiple file uploads to S3
+        if (!empty($attachmentFiles)) {
+            foreach ($attachmentFiles as $file) {
+                // Generate unique filename to prevent conflicts
+                $originalName = $file->getClientOriginalName();
+                $extension = $file->getClientOriginalExtension();
+                $filename = 'reports/' . $report->id . '/' . time() . '_' . uniqid() . '.' . $extension;
                 
-                $report->reportUploads()->create([
-                    'file_url' => asset('storage/' . $path),
-                    'file_type' => $file->getMimeType(),
-                    'uploaded_by' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
-                ]);
+                try {
+                    // Upload to S3
+                    $path = $file->storeAs('', $filename, 's3');
+                    $s3Url = \Storage::disk('s3')->url($path);
+                    
+                    ReportUploads::create([
+                        'report_id' => $report->id,
+                        'file_url' => $s3Url,
+                        'file_type' => $file->getMimeType(),
+                        'uploaded_by' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
+                        'original_filename' => $originalName,
+                        's3_path' => $path, // Store S3 path for easier management
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to upload file to S3: ' . $e->getMessage(), [
+                        'file' => $originalName,
+                        'report_id' => $report->id
+                    ]);
+                    
+                    // Continue with other files, but log the error
+                    continue;
+                }
             }
         }
 
+        $successfulUploads = $report->reportUploads()->count();
+        $message = $successfulUploads > 0 
+            ? "Report created successfully with {$successfulUploads} attachment(s)."
+            : "Report created successfully.";
+
         return redirect()->route('admin.reports.show', $report->id)
-            ->with('success', 'Report created successfully.');
+            ->with('success', $message);
     }
 
     public function edit(Report $report)
@@ -191,7 +222,7 @@ class ReportController extends Controller
             'escalation_status' => 'nullable|string|max:255',
             'feedback_given' => 'nullable|boolean',
             'attachments' => 'nullable|array',
-            'attachments.*' => 'file|mimes:jpg,jpeg,png,gif,pdf,doc,docx|max:10240',
+            'attachments.*' => 'file|mimes:jpg,jpeg,png,gif,webp,bmp,tiff,mp4,webm,ogg,avi,mov,wmv,flv,mkv,pdf,doc,docx|max:102400',
         ]);
 
         $report->update($validated);
@@ -227,13 +258,13 @@ class ReportController extends Controller
             ->with('success', 'Report deleted successfully.');
     }
 
-    /**
-     * Escalate a report
-     */
     public function escalate(Request $request, Report $report)
     {
         $validated = $request->validate([
-            'escalation_reason' => 'required|string',
+            'escalation_priority' => 'required|string|in:Critical,High,Medium',
+            'escalation_reason' => 'required|string|min:10',
+            'notify_users' => 'required|array|min:1',
+            'notify_users.*' => 'exists:users,id',
         ]);
 
         $report->update([
@@ -241,14 +272,30 @@ class ReportController extends Controller
             'escalation_status' => 'Escalated',
         ]);
 
-        $report->reportEscalations()->create([
+        $escalation = $report->reportEscalations()->create([
             'escalated_by_user_id' => auth()->id(),
             'escalation_reason' => $validated['escalation_reason'],
+            'escalation_priority' => $validated['escalation_priority'],
             'escalated_at' => now(),
         ]);
 
+        // Create notifications for each user
+        foreach ($validated['notify_users'] as $userId) {
+            $escalation->notifications()->create([
+                'user_id' => $userId,
+                'notification_type' => 'email', // or determine type dynamically
+                'status' => 'pending',
+                'metadata' => json_encode([
+                    'initiated_by' => auth()->user()->name,
+                    'report_id' => $report->id,
+                    'priority' => $validated['escalation_priority'],
+                ]),
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Report escalated successfully.');
     }
+
 
     /**
      * Remove file attachment
