@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('report_id')->constrained('reports')->cascadeOnDelete();
             $table->foreignId('escalated_by_user_id')->constrained('users')->cascadeOnDelete();
             $table->text('escalation_reason');
+            $table->string('escalation_priority');
             $table->timestamp('escalated_at');
             $table->timestamps();
         });
