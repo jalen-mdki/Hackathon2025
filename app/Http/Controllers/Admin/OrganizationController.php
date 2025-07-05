@@ -45,7 +45,7 @@ class OrganizationController extends Controller
             'employees',
             'hazards',
             'emergencyResponsePlans',
-            'userTrainings',
+            'userTrainings.training',
         ]);
 
         return inertia('Admin/Organizations/Show', [
