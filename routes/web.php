@@ -6,13 +6,64 @@ use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\TrainingController;
+use App\Models\UserTraining;
+use App\Models\Report;
+use App\Models\Hazards;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
 Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
+
+    $reportStatusCounts = Report::select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $trainingStatusCounts = UserTraining::select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $hazardRiskCounts = Hazards::select('risk_level', DB::raw('count(*) as total'))
+            ->groupBy('risk_level')
+            ->pluck('total', 'risk_level');
+
+        $reportsByMonth = Report::select(DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"), DB::raw('count(*) as total'))
+            ->where('created_at', '>=', now()->subMonths(12))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total', 'month');
+
+    return Inertia::render('Dashboard', [
+            'reportStatusData' => [
+                'labels' => $reportStatusCounts->keys(),
+                'datasets' => [[
+                    'label' => 'Reports by Status',
+                    'data' => $reportStatusCounts->values(),
+                ]]
+            ],
+            'trainingStatusData' => [
+                'labels' => $trainingStatusCounts->keys(),
+                'datasets' => [[
+                    'label' => 'Trainings by Status',
+                    'data' => $trainingStatusCounts->values(),
+                ]]
+            ],
+            'hazardsByRiskData' => [
+                'labels' => $hazardRiskCounts->keys(),
+                'datasets' => [[
+                    'label' => 'Hazards by Risk Level',
+                    'data' => $hazardRiskCounts->values(),
+                ]]
+            ],
+            'reportsByMonthData' => [
+                'labels' => $reportsByMonth->keys(),
+                'datasets' => [[
+                    'label' => 'Reports by Month',
+                    'data' => $reportsByMonth->values(),
+                ]]
+            ],
+        ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Admin Organization Routes
