@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { Pie, Bar, Line, Doughnut, PolarArea } from 'vue-chartjs';
 import {
     Chart,
@@ -30,6 +30,15 @@ const breadcrumbs = [
 
 const page = usePage();
 const darkMode = ref(true);
+
+// Mapbox integration
+const mapContainer = ref(null);
+const map = ref(null);
+
+// Map data from reports
+const mapReportsData = computed(() => {
+    return page.props.mapReportsData || [];
+});
 
 // Consistent color palette matching the hero design
 const colors = {
@@ -399,8 +408,132 @@ const toggleDarkMode = () => {
     document.documentElement.classList.toggle('dark', darkMode.value);
 };
 
+// Mapbox functions
+const initializeMap = () => {
+    if (!window.mapboxgl || !mapContainer.value) return;
+
+    // Initialize map centered on Georgetown, Guyana
+    map.value = new window.mapboxgl.Map({
+        container: mapContainer.value,
+        style: darkMode.value ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
+        center: [-58.1551, 6.8013], // Georgetown, Guyana
+        zoom: 12,
+        attributionControl: false
+    });
+
+    // Add navigation controls
+    map.value.addControl(new window.mapboxgl.NavigationControl());
+
+    // Add fullscreen control
+    map.value.addControl(new window.mapboxgl.FullscreenControl());
+
+    // Wait for map to load before adding markers
+    map.value.on('load', () => {
+        addMarkersToMap();
+    });
+};
+
+const addMarkersToMap = () => {
+    if (!map.value) return;
+
+    mapReportsData.value.forEach(report => {
+        // Create marker element
+        const markerElement = document.createElement('div');
+        markerElement.className = 'custom-marker';
+        markerElement.style.width = '24px';
+        markerElement.style.height = '24px';
+        markerElement.style.borderRadius = '50%';
+        markerElement.style.border = '3px solid white';
+        markerElement.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
+        markerElement.style.cursor = 'pointer';
+        
+        // Set color based on severity
+        const severityColors = {
+            'Critical': '#DC2626',
+            'High': '#EF4444', 
+            'Medium': '#F59E0B',
+            'Low': '#10B981'
+        };
+        markerElement.style.backgroundColor = severityColors[report.severity] || '#6B7280';
+
+        // Create popup content
+        const popupContent = `
+            <div class="p-4 max-w-sm">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-3 h-3 rounded-full" style="background-color: ${severityColors[report.severity]}"></div>
+                    <span class="font-semibold text-slate-800">${report.severity} - ${report.type}</span>
+                </div>
+                <p class="text-sm text-slate-600 mb-3">${report.description}</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs px-2 py-1 rounded-full ${
+                        report.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                        report.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                    }">${report.status}</span>
+                    <span class="text-xs text-slate-500">ID: #${report.id}</span>
+                </div>
+            </div>
+        `;
+
+        // Create popup
+        const popup = new window.mapboxgl.Popup({
+            offset: 25,
+            closeButton: true,
+            closeOnClick: false
+        }).setHTML(popupContent);
+
+        // Create marker
+        new window.mapboxgl.Marker(markerElement)
+            .setLngLat([report.lng, report.lat])
+            .setPopup(popup)
+            .addTo(map.value);
+    });
+};
+
+const updateMapStyle = () => {
+    if (map.value) {
+        const newStyle = darkMode.value ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11';
+        map.value.setStyle(newStyle);
+        
+        // Re-add markers after style change
+        map.value.on('styledata', () => {
+            if (map.value.isStyleLoaded()) {
+                addMarkersToMap();
+            }
+        });
+    }
+};
+
 onMounted(() => {
     document.documentElement.classList.toggle('dark', darkMode.value);
+    
+    // Load Mapbox GL JS
+    if (!window.mapboxgl) {
+        const script = document.createElement('script');
+        script.src = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js';
+        script.onload = () => {
+            const link = document.createElement('link');
+            link.href = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css';
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+            
+            // Set your Mapbox access token here
+            window.mapboxgl.accessToken = 'pk.eyJ1IjoibmljaG9sYXMyNCIsImEiOiJja2Ezd2dlMXYwbzA5M2ZueHR0emVwajZ5In0.XSP4rtPQY49IWsScgPwErw';
+            
+            setTimeout(() => {
+                initializeMap();
+            }, 100);
+        };
+        document.head.appendChild(script);
+    } else {
+        initializeMap();
+    }
+});
+
+onBeforeUnmount(() => {
+    if (map.value) {
+        map.value.remove();
+    }
 });
 </script>
 
@@ -420,13 +553,12 @@ onMounted(() => {
                         <div class="flex items-center justify-between mb-12">
                             <div class="flex items-center gap-4">
                                 <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                                    <svg class="w-8 h-8 text-white"  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
-
                                 </div>
                                 <div>
-                                    <h1 class="text-4xl font-bold text-white">Dashboard Analytics</h1>
+                                    <h1 class="text-4xl font-bold text-white">Safety Command Center</h1>
                                     <p class="text-blue-100 text-lg mt-2">Real-time safety monitoring and analytics</p>
                                 </div>
                             </div>
@@ -437,7 +569,7 @@ onMounted(() => {
                                     <span class="text-white font-medium">Live Data</span>
                                 </div>
                                 
-                                <button @click="toggleDarkMode" 
+                                <button @click="toggleDarkMode(); updateMapStyle()" 
                                         class="p-3 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200">
                                     <svg v-if="darkMode" class="w-5 h-5 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
@@ -508,7 +640,7 @@ onMounted(() => {
                                     </div>
                                     <div class="w-12 h-12 bg-green-500/30 rounded-xl flex items-center justify-center">
                                         <svg class="w-6 h-6 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253"></path>
                                         </svg>
                                     </div>
                                 </div>
@@ -735,6 +867,134 @@ onMounted(() => {
                         </div>
                     </div>
                 </div>
+
+                <!-- Geographic Distribution Map -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Geographic Distribution</h3>
+                            <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">Incident locations mapped by severity and type</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full">
+                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span class="text-slate-700 dark:text-slate-300 text-sm font-medium">{{ mapReportsData.length }} Locations</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <!-- Map Container -->
+                        <div class="lg:col-span-3">
+                            <div 
+                                ref="mapContainer" 
+                                class="w-full h-96 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600"
+                                style="background-color: #f1f5f9;"
+                            >
+                                <!-- Fallback content while map loads -->
+                                <div class="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-700">
+                                    <div class="text-center">
+                                        <svg class="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                        <p class="text-slate-500 dark:text-slate-400">Loading map...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Map Legend and Stats -->
+                        <div class="space-y-6">
+                            <!-- Severity Legend -->
+                            <div>
+                                <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Severity Legend</h4>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-4 h-4 bg-red-600 rounded-full border-2 border-white shadow-md"></div>
+                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Critical</span>
+                                        <span class="text-sm text-slate-500 ml-auto">{{ mapReportsData.filter(r => r.severity === 'Critical').length }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-4 h-4 bg-red-400 rounded-full border-2 border-white shadow-md"></div>
+                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">High</span>
+                                        <span class="text-sm text-slate-500 ml-auto">{{ mapReportsData.filter(r => r.severity === 'High').length }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-4 h-4 bg-amber-500 rounded-full border-2 border-white shadow-md"></div>
+                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Medium</span>
+                                        <span class="text-sm text-slate-500 ml-auto">{{ mapReportsData.filter(r => r.severity === 'Medium').length }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-4 h-4 bg-emerald-500 rounded-full border-2 border-white shadow-md"></div>
+                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Low</span>
+                                        <span class="text-sm text-slate-500 ml-auto">{{ mapReportsData.filter(r => r.severity === 'Low').length }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Stats -->
+                            <div>
+                                <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Location Stats</h4>
+                                <div class="space-y-3">
+                                    <div class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">High Priority Areas</span>
+                                            <span class="font-bold text-red-600 dark:text-red-400">{{ mapReportsData.filter(r => r.severity === 'Critical' || r.severity === 'High').length }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Pending Resolution</span>
+                                            <span class="font-bold text-amber-600 dark:text-amber-400">{{ mapReportsData.filter(r => r.status === 'Pending').length }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Active Zones</span>
+                                            <span class="font-bold text-blue-600 dark:text-blue-400">{{ new Set(mapReportsData.map(r => `${Math.floor(r.lat * 100)}-${Math.floor(r.lng * 100)}`)).size }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Map Actions -->
+                            <div>
+                                <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Map Actions</h4>
+                                <div class="space-y-2">
+                                    <button class="w-full p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors text-sm">
+                                        View All Locations
+                                    </button>
+                                    <button class="w-full p-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-lg font-medium transition-colors text-sm">
+                                        Export Map Data
+                                    </button>
+                                    <button class="w-full p-3 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg font-medium transition-colors text-sm">
+                                        Focus High Risk
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-l-4 border-blue-500">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="font-semibold text-blue-800 dark:text-blue-200">Geographic Insights</span>
+                        </div>
+                        <p class="text-blue-700 dark:text-blue-300 text-sm">
+                            Click on any marker to view detailed incident information. High-risk areas require immediate attention and increased safety measures.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Risk Assessment Matrix -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
                     <div class="flex items-center justify-between mb-6">
                         <div>

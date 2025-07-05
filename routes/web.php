@@ -15,93 +15,106 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('dashboard', function () {
-
+    // Existing queries...
     $reportStatusCounts = Report::select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
+        ->groupBy('status')
+        ->pluck('total', 'status');
 
-        $trainingStatusCounts = UserTraining::select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')
-            ->pluck('total', 'status');
+    $trainingStatusCounts = UserTraining::select('status', DB::raw('count(*) as total'))
+        ->groupBy('status')
+        ->pluck('total', 'status');
 
-        $hazardRiskCounts = Hazards::select('risk_level', DB::raw('count(*) as total'))
-            ->groupBy('risk_level')
-            ->pluck('total', 'risk_level');
+    $hazardRiskCounts = Hazards::select('risk_level', DB::raw('count(*) as total'))
+        ->groupBy('risk_level')
+        ->pluck('total', 'risk_level');
 
-        $reportsByMonth = Report::select(DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"), DB::raw('count(*) as total'))
-            ->where('created_at', '>=', now()->subMonths(12))
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('total', 'month');
+    $reportsByMonth = Report::select(DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"), DB::raw('count(*) as total'))
+        ->where('created_at', '>=', now()->subMonths(12))
+        ->groupBy('month')
+        ->orderBy('month')
+        ->pluck('total', 'month');
 
-        $reportTypeCounts = Report::select('report_type', DB::raw('count(*) as total'))
-            ->groupBy('report_type')
-            ->pluck('total', 'report_type');
+    $reportTypeCounts = Report::select('report_type', DB::raw('count(*) as total'))
+        ->groupBy('report_type')
+        ->pluck('total', 'report_type');
 
-        // Incident types breakdown  
-        $incidentTypeCounts = Report::select('incident_type', DB::raw('count(*) as total'))
-            ->whereNotNull('incident_type')
-            ->groupBy('incident_type')
-            ->pluck('total', 'incident_type');
+    $incidentTypeCounts = Report::select('incident_type', DB::raw('count(*) as total'))
+        ->whereNotNull('incident_type')
+        ->groupBy('incident_type')
+        ->pluck('total', 'incident_type');
 
-        // Severity breakdown
-        $severityCounts = Report::select('severity', DB::raw('count(*) as total'))
-            ->whereNotNull('severity')
-            ->groupBy('severity')
-            ->pluck('total', 'severity');
-            
+    $severityCounts = Report::select('severity', DB::raw('count(*) as total'))
+        ->whereNotNull('severity')
+        ->groupBy('severity')
+        ->pluck('total', 'severity');
+    
+    // Add this query to get reports with location data
+    $mapReports = Report::select([
+            'id',
+            'location_lat as lat',
+            'location_long as lng',
+            'severity',
+            'report_type as type',
+            'status',
+            'description'
+        ])
+        ->whereNotNull('location_lat')
+        ->whereNotNull('location_long')
+        ->get();
 
     return Inertia::render('Dashboard', [
-            'reportStatusData' => [
-                'labels' => $reportStatusCounts->keys(),
-                'datasets' => [[
-                    'label' => 'Reports by Status',
-                    'data' => $reportStatusCounts->values(),
-                ]]
-            ],
-            'trainingStatusData' => [
-                'labels' => $trainingStatusCounts->keys(),
-                'datasets' => [[
-                    'label' => 'Trainings by Status',
-                    'data' => $trainingStatusCounts->values(),
-                ]]
-            ],
-            'hazardsByRiskData' => [
-                'labels' => $hazardRiskCounts->keys(),
-                'datasets' => [[
-                    'label' => 'Hazards by Risk Level',
-                    'data' => $hazardRiskCounts->values(),
-                ]]
-            ],
-            'reportsByMonthData' => [
-                'labels' => $reportsByMonth->keys(),
-                'datasets' => [[
-                    'label' => 'Reports by Month',
-                    'data' => $reportsByMonth->values(),
-                ]]
-            ],
-            'reportTypeData' => [
-                'labels' => $reportTypeCounts->keys(),
-                'datasets' => [[
-                    'label' => 'Reports by Type',
-                    'data' => $reportTypeCounts->values(),
-                ]]
-            ],
-            'incidentTypeData' => [
-                'labels' => $incidentTypeCounts->keys(),
-                'datasets' => [[
-                    'label' => 'Incidents by Type', 
-                    'data' => $incidentTypeCounts->values(),
-                ]]
-            ],
-            'severityBreakdownData' => [
-                'labels' => $severityCounts->keys(),
-                'datasets' => [[
-                    'label' => 'Incidents by Severity',
-                    'data' => $severityCounts->values(),
-                ]]
-            ],
-        ]);
+        'reportStatusData' => [
+            'labels' => $reportStatusCounts->keys(),
+            'datasets' => [[
+                'label' => 'Reports by Status',
+                'data' => $reportStatusCounts->values(),
+            ]]
+        ],
+        'trainingStatusData' => [
+            'labels' => $trainingStatusCounts->keys(),
+            'datasets' => [[
+                'label' => 'Trainings by Status',
+                'data' => $trainingStatusCounts->values(),
+            ]]
+        ],
+        'hazardsByRiskData' => [
+            'labels' => $hazardRiskCounts->keys(),
+            'datasets' => [[
+                'label' => 'Hazards by Risk Level',
+                'data' => $hazardRiskCounts->values(),
+            ]]
+        ],
+        'reportsByMonthData' => [
+            'labels' => $reportsByMonth->keys(),
+            'datasets' => [[
+                'label' => 'Reports by Month',
+                'data' => $reportsByMonth->values(),
+            ]]
+        ],
+        'reportTypeData' => [
+            'labels' => $reportTypeCounts->keys(),
+            'datasets' => [[
+                'label' => 'Reports by Type',
+                'data' => $reportTypeCounts->values(),
+            ]]
+        ],
+        'incidentTypeData' => [
+            'labels' => $incidentTypeCounts->keys(),
+            'datasets' => [[
+                'label' => 'Incidents by Type', 
+                'data' => $incidentTypeCounts->values(),
+            ]]
+        ],
+        'severityBreakdownData' => [
+            'labels' => $severityCounts->keys(),
+            'datasets' => [[
+                'label' => 'Incidents by Severity',
+                'data' => $severityCounts->values(),
+            ]]
+        ],
+        // Add the map reports data
+        'mapReportsData' => $mapReports
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Admin Organization Routes
