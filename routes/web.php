@@ -34,6 +34,23 @@ Route::get('dashboard', function () {
             ->orderBy('month')
             ->pluck('total', 'month');
 
+        $reportTypeCounts = Report::select('report_type', DB::raw('count(*) as total'))
+            ->groupBy('report_type')
+            ->pluck('total', 'report_type');
+
+        // Incident types breakdown  
+        $incidentTypeCounts = Report::select('incident_type', DB::raw('count(*) as total'))
+            ->whereNotNull('incident_type')
+            ->groupBy('incident_type')
+            ->pluck('total', 'incident_type');
+
+        // Severity breakdown
+        $severityCounts = Report::select('severity', DB::raw('count(*) as total'))
+            ->whereNotNull('severity')
+            ->groupBy('severity')
+            ->pluck('total', 'severity');
+            
+
     return Inertia::render('Dashboard', [
             'reportStatusData' => [
                 'labels' => $reportStatusCounts->keys(),
@@ -61,6 +78,27 @@ Route::get('dashboard', function () {
                 'datasets' => [[
                     'label' => 'Reports by Month',
                     'data' => $reportsByMonth->values(),
+                ]]
+            ],
+            'reportTypeData' => [
+                'labels' => $reportTypeCounts->keys(),
+                'datasets' => [[
+                    'label' => 'Reports by Type',
+                    'data' => $reportTypeCounts->values(),
+                ]]
+            ],
+            'incidentTypeData' => [
+                'labels' => $incidentTypeCounts->keys(),
+                'datasets' => [[
+                    'label' => 'Incidents by Type', 
+                    'data' => $incidentTypeCounts->values(),
+                ]]
+            ],
+            'severityBreakdownData' => [
+                'labels' => $severityCounts->keys(),
+                'datasets' => [[
+                    'label' => 'Incidents by Severity',
+                    'data' => $severityCounts->values(),
                 ]]
             ],
         ]);

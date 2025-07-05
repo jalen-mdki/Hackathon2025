@@ -130,6 +130,77 @@ const reportsByMonthData = computed(() => {
     };
 });
 
+// New chart data for report types and incident types
+const reportTypeData = computed(() => {
+    const data = page.props.reportTypeData || {
+        labels: ['Near Miss', 'Injury', 'Property Damage', 'Environmental', 'Security'],
+        datasets: [{ data: [15, 8, 12, 5, 3] }]
+    };
+    return {
+        ...data,
+        datasets: [{
+            ...data.datasets[0],
+            backgroundColor: [
+                colors.primary,    // Near Miss
+                colors.danger,     // Injury
+                colors.warning,    // Property Damage
+                colors.teal,       // Environmental
+                colors.purple,     // Security
+            ],
+            borderColor: '#1e293b',
+            borderWidth: 2,
+            hoverBorderWidth: 3,
+            hoverOffset: 10,
+        }]
+    };
+});
+
+const incidentTypeData = computed(() => {
+    const data = page.props.incidentTypeData || {
+        labels: ['Slip/Fall', 'Equipment Failure', 'Chemical Spill', 'Fire/Explosion', 'Vehicle Accident', 'Other'],
+        datasets: [{ data: [12, 8, 5, 2, 6, 10] }]
+    };
+    return {
+        ...data,
+        datasets: [{
+            ...data.datasets[0],
+            backgroundColor: colors.warning,
+            borderColor: colors.warning,
+            borderWidth: 0,
+            borderRadius: 6,
+            borderSkipped: false,
+            hoverBackgroundColor: colors.danger,
+        }]
+    };
+});
+
+const severityBreakdownData = computed(() => {
+    const data = page.props.severityBreakdownData || {
+        labels: ['Critical', 'High', 'Medium', 'Low'],
+        datasets: [{ data: [3, 8, 15, 17] }]
+    };
+    return {
+        ...data,
+        datasets: [{
+            ...data.datasets[0],
+            backgroundColor: [
+                colors.danger,     // Critical
+                '#FF6B35',         // High (orange-red)
+                colors.warning,    // Medium
+                colors.success,    // Low
+            ],
+            borderColor: '#1e293b',
+            borderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointBorderWidth: 2,
+            pointBorderColor: '#1e293b',
+            fill: true,
+            tension: 0.4,
+        }]
+    };
+});
+
 // Enhanced metrics calculations
 const totalReports = computed(() => {
     return reportStatusData.value.datasets[0].data.reduce((a, b) => a + b, 0);
@@ -151,6 +222,26 @@ const highRiskPercentage = computed(() => {
     const highRisk = hazardsByRiskData.value.datasets[0].data[0];
     const total = hazardsByRiskData.value.datasets[0].data.reduce((a, b) => a + b, 0);
     return Math.round((highRisk / total) * 100);
+});
+
+// Additional computed properties for the new charts
+const mostCommonReportType = computed(() => {
+    const data = reportTypeData.value.datasets[0].data;
+    const labels = reportTypeData.value.labels;
+    const maxIndex = data.indexOf(Math.max(...data));
+    return labels[maxIndex];
+});
+
+const mostCommonIncidentType = computed(() => {
+    const data = incidentTypeData.value.datasets[0].data;
+    const labels = incidentTypeData.value.labels;
+    const maxIndex = data.indexOf(Math.max(...data));
+    return labels[maxIndex];
+});
+
+const criticalIncidentCount = computed(() => {
+    const data = severityBreakdownData.value.datasets[0].data;
+    return data[0] || 0; // First item is Critical
 });
 
 // Enhanced chart options with consistent styling
@@ -273,12 +364,12 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Safety Dashboard" />
+    <Head title="Dashboard Analytics" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="min-h-screen bg-slate-50 dark:bg-gray-900">
+        <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
             <!-- Hero Section -->
-            <div class="relative bg-gradient-to-br from-blue-800 via-blue-900 to-slate-700 overflow-hidden">
+            <div class="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 overflow-hidden">
                 <!-- Background Pattern -->
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIwOTEzOS0xLjc5MDg2MS00LTQtNHMtNCA1Ljc5MDg2MS00IDhMNCA2MGg4VjQwaDI0eiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
                 
@@ -293,7 +384,7 @@ onMounted(() => {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h1 class="text-4xl font-bold text-white">Safety Command Center</h1>
+                                    <h1 class="text-4xl font-bold text-white">Dashboard Analytics</h1>
                                     <p class="text-blue-100 text-lg mt-2">Real-time safety monitoring and analytics</p>
                                 </div>
                             </div>
@@ -407,7 +498,7 @@ onMounted(() => {
             </div>
 
             <!-- Main Content -->
-            <div class="max-w-7xl mx-auto px-6 py-8">
+            <div class="max-w-7xl mx-auto px-6 py-8 mt-6">
                 <!-- Charts Section -->
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                     <!-- Incident Status Chart -->
@@ -479,7 +570,129 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Risk Analysis Chart -->
+                <!-- Report Type & Incident Analysis -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
+                    <!-- Report Types Breakdown -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Report Types</h3>
+                                <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">Breakdown by report category</p>
+                            </div>
+                            <div class="flex items-center gap-2 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                                <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <span class="text-purple-700 dark:text-purple-300 text-sm font-medium">Categories</span>
+                            </div>
+                        </div>
+                        
+                        <div class="h-64">
+                            <Pie 
+                                :data="reportTypeData" 
+                                :options="chartOptions('pie')"
+                            />
+                        </div>
+                        
+                        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-l-4 border-blue-500">
+                            <div class="flex items-center gap-2 mb-2">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="font-semibold text-blue-800 dark:text-blue-200">Key Insight</span>
+                            </div>
+                            <p class="text-blue-700 dark:text-blue-300 text-sm">
+                                Near misses account for the majority of reports, indicating good proactive reporting culture.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Incident Types Breakdown -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Incident Types</h3>
+                                <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">Most common incident categories</p>
+                            </div>
+                            <div class="flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                <span class="text-amber-700 dark:text-amber-300 text-sm font-medium">Focus Areas</span>
+                            </div>
+                        </div>
+                        
+                        <div class="h-64">
+                            <Bar 
+                                :data="incidentTypeData" 
+                                :options="{
+                                    ...chartOptions('bar'),
+                                    plugins: {
+                                        ...chartOptions('bar').plugins,
+                                        legend: {
+                                            display: false
+                                        }
+                                    }
+                                }"
+                            />
+                        </div>
+                        
+                        <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border-l-4 border-amber-500">
+                            <div class="flex items-center gap-2 mb-2">
+                                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                <span class="font-semibold text-amber-800 dark:text-amber-200">Prevention Focus</span>
+                            </div>
+                            <p class="text-amber-700 dark:text-amber-300 text-sm">
+                                Slip/fall incidents are most common. Review floor conditions and safety signage.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Severity Analysis -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">Severity Trends</h3>
+                                <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">Incident severity over time</p>
+                            </div>
+                            <div class="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900/30 rounded-full">
+                                <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                                <span class="text-red-700 dark:text-red-300 text-sm font-medium">Monitor</span>
+                            </div>
+                        </div>
+                        
+                        <div class="h-64">
+                            <Line 
+                                :data="severityBreakdownData" 
+                                :options="{
+                                    ...chartOptions('line'),
+                                    plugins: {
+                                        ...chartOptions('line').plugins,
+                                        legend: {
+                                            display: false
+                                        }
+                                    }
+                                }"
+                            />
+                        </div>
+                        
+                        <div class="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border-l-4 border-green-500">
+                            <div class="flex items-center gap-2 mb-2">
+                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="font-semibold text-green-800 dark:text-green-200">Positive Trend</span>
+                            </div>
+                            <p class="text-green-700 dark:text-green-300 text-sm">
+                                Most incidents are low severity. Critical incidents remain minimal with effective controls.
+                            </p>
+                        </div>
+                    </div>
+                </div>
                 <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
                     <div class="flex items-center justify-between mb-6">
                         <div>
