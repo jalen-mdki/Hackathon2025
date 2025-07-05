@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\UserController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -40,6 +41,7 @@ Route::middleware(['auth', 'verified', 'can:admin-access'])->prefix('admin')->na
     Route::get('escalations/{escalation}', [EscalationController::class, 'show'])->name('escalations.show');
     Route::post('escalations/{escalation}/assign', [EscalationController::class, 'assign'])->name('escalations.assign');
     Route::post('escalations/{escalation}/update', [EscalationController::class, 'addUpdate'])->name('escalations.update');
+    Route::resource('users', UserController::class);
 });
 
 // Non-admin (general) organization routes placeholder for future expansion

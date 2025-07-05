@@ -9,4 +9,15 @@ class OrganizationUsers extends Model
 {
     /** @use HasFactory<\Database\Factories\OrganizationUsersFactory> */
     use HasFactory;
+
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
+    }
 }
