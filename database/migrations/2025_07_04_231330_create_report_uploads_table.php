@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('file_url');
             $table->string('file_type');
             $table->string('uploaded_by')->nullable();
+            $table->string('original_filename')->nullable()->after('file_type');
+            $table->string('s3_path')->nullable()->after('original_filename');
             $table->timestamps();
         });
     }
