@@ -2,6 +2,7 @@
 import { Head, usePage, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import EscalationModal from '@/components/EscalationModal.vue';
 
 interface Report {
   id: number;
@@ -65,6 +66,8 @@ interface Report {
 
 const { props } = usePage();
 const report = props.report as Report;
+
+
 
 const activeTab = ref('Details');
 
@@ -170,6 +173,8 @@ const goToImage = (index: number) => {
   currentImageIndex.value = index;
 };
 
+const showEscalationModal = ref(false);
+
 // Analytics data
 const analyticsData = computed(() => ({
   totalAttachments: report.report_uploads?.length || 0,
@@ -186,8 +191,19 @@ const editReport = () => {
 };
 
 const escalateReport = () => {
-  // This would open a modal or redirect to escalation form
-  console.log('Escalate report');
+  console.log(`Opening escalation modal`);
+  showEscalationModal.value = true;
+};
+
+// ADD THESE: Modal event handlers
+const closeEscalationModal = () => {
+  showEscalationModal.value = false;
+};
+
+const onEscalated = () => {
+  showEscalationModal.value = false;
+  // Optionally refresh the page or update the report data
+  // window.location.reload(); // or update local state
 };
 
 const downloadAttachment = (attachment: any) => {
@@ -877,7 +893,13 @@ const downloadAttachment = (attachment: any) => {
         </div>
       </div>
     </div>
-  </AppLayout>
+    <EscalationModal
+      :report="report"
+      :show="showEscalationModal"
+      @close="closeEscalationModal"
+      @escalated="onEscalated"
+    />
+</AppLayout>
 </template>
 
 <style scoped>
