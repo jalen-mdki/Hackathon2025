@@ -163,7 +163,6 @@ class ReportController extends Controller
                         'file_url' => $s3Url,
                         'file_type' => $file->getMimeType(),
                         'uploaded_by' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
-                        'original_filename' => $originalName,
                         's3_path' => $path, // Store S3 path for easier management
                     ]);
                 } catch (\Exception $e) {

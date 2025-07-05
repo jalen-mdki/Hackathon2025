@@ -16,7 +16,6 @@ class ReportUploads extends Model
         'file_url',
         'file_type',
         'uploaded_by',
-        'original_filename',
         's3_path',
     ];
 
