@@ -30,7 +30,16 @@ Route::middleware(['auth', 'verified', 'can:admin-access'])->prefix('admin')->na
         Route::get('/{report}/edit', [ReportController::class, 'edit'])->name('edit');
         Route::put('/{report}', [ReportController::class, 'update'])->name('update');
         Route::delete('/{report}', [ReportController::class, 'destroy'])->name('destroy');
+
+        Route::post('/{report}/escalate', [ReportController::class, 'escalate'])->name('reports.escalate');
+        Route::post('/{report}/resolve-escalation', [ReportController::class, 'resolveEscalation'])->name('reports.resolve-escalation');
+    
     });
+
+    Route::get('escalations', [EscalationController::class, 'index'])->name('escalations.index');
+    Route::get('escalations/{escalation}', [EscalationController::class, 'show'])->name('escalations.show');
+    Route::post('escalations/{escalation}/assign', [EscalationController::class, 'assign'])->name('escalations.assign');
+    Route::post('escalations/{escalation}/update', [EscalationController::class, 'addUpdate'])->name('escalations.update');
 });
 
 // Non-admin (general) organization routes placeholder for future expansion
