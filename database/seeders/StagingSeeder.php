@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Training;
+use App\Models\Report;
 
 class StagingSeeder extends Seeder
 {
@@ -160,5 +161,63 @@ class StagingSeeder extends Seeder
                 'updated_at' => now(),
             ],
         ]);
+
+        // Create Reports with Media
+        $report1 = Report::create([
+            'organization_id' => $org1->id,
+            'report_type' => 'Safety Inspection',
+            'description' => 'Routine inspection conducted on excavation site.',
+            'status' => 'Completed',
+            'reported_by_user_id' => $user2->id,
+            'date_of_incident' => now()
+        ]);
+
+        $report2 = Report::create([
+            'organization_id' => $org2->id,
+            'report_type' => 'Incident Report',
+            'description' => 'Minor injury reported on scaffolding site.',
+            'status' => 'Pending',
+            'reported_by_user_id' => $user3->id,
+            'date_of_incident' => now()
+        ]);
+
+        // Attach sample media to reports (using Spatie Media Library)
+        // Attach random images to reports via report_uploads
+        DB::table('report_uploads')->insert([
+            [
+                'report_id' => $report1->id,
+                'file_url' => 'https://via.placeholder.com/600x400.png?text=Inspection+Photo+1',
+                'file_type' => 'image/png',
+                'uploaded_by' => $user2->email,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'report_id' => $report1->id,
+                'file_url' => 'https://via.placeholder.com/600x400.png?text=Inspection+Photo+2',
+                'file_type' => 'image/png',
+                'uploaded_by' => $user2->email,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'report_id' => $report2->id,
+                'file_url' => 'https://via.placeholder.com/600x400.png?text=Incident+Photo+1',
+                'file_type' => 'image/png',
+                'uploaded_by' => $user3->email,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'report_id' => $report2->id,
+                'file_url' => 'https://via.placeholder.com/600x400.png?text=Incident+Photo+2',
+                'file_type' => 'image/png',
+                'uploaded_by' => $user3->email,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+
     }
 }
