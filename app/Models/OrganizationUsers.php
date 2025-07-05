@@ -10,6 +10,13 @@ class OrganizationUsers extends Model
     /** @use HasFactory<\Database\Factories\OrganizationUsersFactory> */
     use HasFactory;
 
+    protected $fillable = [
+        'user_id',
+        'organization_id',
+        'role',
+        'is_active'
+    ];
+
 
     public function user()
     {
