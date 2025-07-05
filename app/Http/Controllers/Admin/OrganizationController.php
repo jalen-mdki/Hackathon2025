@@ -38,6 +38,43 @@ class OrganizationController extends Controller
         return redirect()->route('admin.organizations.index')->with('success', 'Organization created successfully.');
     }
 
+    public function show(Organization $organization)
+    {
+        $organization->load([
+            'reports.reportUploads', // include report uploads for images
+            'employees',
+            'hazards',
+            'emergencyResponsePlans',
+            'userTrainings',
+        ]);
+
+        return inertia('Admin/Organizations/Show', [
+            'organization' => $organization,
+            'reports' => $organization->reports->map(function ($report) {
+                return [
+                    'id' => $report->id,
+                    'report_type' => $report->report_type,
+                    'description' => $report->description,
+                    'status' => $report->status,
+                    'date_of_incident' => $report->date_of_incident,
+                    'report_uploads' => $report->reportUploads->map(function ($upload) {
+                        return [
+                            'id' => $upload->id,
+                            'file_url' => $upload->file_url,
+                            'file_type' => $upload->file_type,
+                        ];
+                    }),
+                ];
+            }),
+            'employees' => $organization->employees,
+            'hazards' => $organization->hazards,
+            'emergencyResponsePlans' => $organization->emergencyResponsePlans,
+            'userTrainings' => $organization->userTrainings,
+        ]);
+    }
+
+
+
     // Show edit form
     public function edit(Organization $organization)
     {
