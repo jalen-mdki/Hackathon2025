@@ -131,7 +131,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        $user->load(['OrganizationUserss.organization']);
+        // $user->load(['OrganizationUsers']);
         
         return Inertia::render('Admin/Users/Show', [
             'user' => $user

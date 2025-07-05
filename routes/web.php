@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\TrainingController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -42,6 +43,18 @@ Route::middleware(['auth', 'verified', 'can:admin-access'])->prefix('admin')->na
     Route::post('escalations/{escalation}/assign', [EscalationController::class, 'assign'])->name('escalations.assign');
     Route::post('escalations/{escalation}/update', [EscalationController::class, 'addUpdate'])->name('escalations.update');
     Route::resource('users', UserController::class);
+
+    Route::resource('trainings', TrainingController::class);
+    
+    // Additional Training Routes
+    Route::get('trainings/{training}/enrollments', [TrainingController::class, 'enrollments'])
+        ->name('trainings.enrollments');
+    
+    Route::post('trainings/bulk-action', [TrainingController::class, 'bulkAction'])
+        ->name('trainings.bulk-action');
+    
+    Route::get('trainings-statistics', [TrainingController::class, 'statistics'])
+        ->name('trainings.statistics');
 });
 
 // Non-admin (general) organization routes placeholder for future expansion

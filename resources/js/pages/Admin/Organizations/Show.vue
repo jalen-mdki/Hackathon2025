@@ -706,7 +706,14 @@ watch(activeTab, (newTab) => {
                 <span :class="`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(report.status)} text-white`">
                     {{ report.status }}
                 </span>
+                 <a
+                :href="`/admin/reports/${report.id}`"
+                class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
+              >
+                View Details →
+              </a>
                 </div>
+                
             </div>
             </div>
         </div>
