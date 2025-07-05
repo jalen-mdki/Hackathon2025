@@ -9,4 +9,10 @@ class Report extends Model
 {
     /** @use HasFactory<\Database\Factories\ReportFactory> */
     use HasFactory;
+
+    public function reportUploads()
+    {
+        return $this->hasMany(ReportUploads::class);
+    }
+
 }
