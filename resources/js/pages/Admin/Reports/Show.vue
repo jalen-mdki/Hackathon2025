@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { Head, usePage, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import EscalationModal from '@/components/EscalationModal.vue';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
+// Mapbox setup
+const mapContainer = ref(null);
+const map = ref(null);
 
 interface Report {
   id: number;
@@ -67,12 +73,9 @@ interface Report {
 const { props } = usePage();
 const report = props.report as Report;
 
-
-
 const activeTab = ref('Details');
-
-// Image slideshow state
 const currentImageIndex = ref(0);
+const showEscalationModal = ref(false);
 
 const tabs = [
   { name: 'Details', icon: '📋', count: null },
@@ -173,8 +176,6 @@ const goToImage = (index: number) => {
   currentImageIndex.value = index;
 };
 
-const showEscalationModal = ref(false);
-
 // Analytics data
 const analyticsData = computed(() => ({
   totalAttachments: report.report_uploads?.length || 0,
@@ -191,24 +192,61 @@ const editReport = () => {
 };
 
 const escalateReport = () => {
-  console.log(`Opening escalation modal`);
   showEscalationModal.value = true;
 };
 
-// ADD THESE: Modal event handlers
 const closeEscalationModal = () => {
   showEscalationModal.value = false;
 };
 
 const onEscalated = () => {
   showEscalationModal.value = false;
-  // Optionally refresh the page or update the report data
-  // window.location.reload(); // or update local state
 };
 
 const downloadAttachment = (attachment: any) => {
   window.open(attachment.file_url, '_blank');
 };
+
+// Mapbox initialization
+const initMap = () => {
+  if (!report.location_lat || !report.location_long) return;
+  
+  mapboxgl.accessToken = 'pk.eyJ1IjoibmljaG9sYXMyNCIsImEiOiJja2Ezd2dlMXYwbzA5M2ZueHR0emVwajZ5In0.XSP4rtPQY49IWsScgPwErw';
+  
+  map.value = new mapboxgl.Map({
+    container: mapContainer.value,
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: [report.location_long, report.location_lat],
+    zoom: 12
+  });
+  
+  new mapboxgl.Marker({ color: '#FF0000' })
+    .setLngLat([report.location_long, report.location_lat])
+    .setPopup(new mapboxgl.Popup().setHTML(`<h3 class="font-bold">Incident Location</h3><p>Report #${report.id}</p>`))
+    .addTo(map.value);
+  
+  map.value.addControl(new mapboxgl.NavigationControl());
+};
+
+onMounted(() => {
+  if (activeTab.value === 'Location') {
+    initMap();
+  }
+});
+
+watch(activeTab, (newTab) => {
+  if (newTab === 'Location') {
+    nextTick(() => {
+      initMap();
+    });
+  }
+});
+
+onUnmounted(() => {
+  if (map.value) {
+    map.value.remove();
+  }
+});
 </script>
 
 <template>
@@ -606,7 +644,7 @@ const downloadAttachment = (attachment: any) => {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <h4 class="text-lg font-semibold text-red-300 mb-2">Escalated By</h4>
+                <h4 class="text-lg font-semibold text-red-300 mb-4">Escalated By</h4>
                 <div class="bg-red-500/5 p-4 rounded-lg border border-red-500/20">
                   <p class="text-white font-medium">
                     {{ escalation.escalated_by_user.first_name }} {{ escalation.escalated_by_user.last_name }}
@@ -615,7 +653,7 @@ const downloadAttachment = (attachment: any) => {
                 </div>
               </div>
               <div>
-                <h4 class="text-lg font-semibold text-red-300 mb-2">Escalation Date</h4>
+                <h4 class="text-lg font-semibold text-red-300 mb-4">Escalation Date</h4>
                 <div class="bg-red-500/5 p-4 rounded-lg border border-red-500/20">
                   <p class="text-white font-medium">{{ formatDate(escalation.escalated_at) }}</p>
                   <p class="text-red-200 text-sm">
@@ -870,15 +908,20 @@ const downloadAttachment = (attachment: any) => {
             </div>
           </div>
 
-          <!-- Simple Map Placeholder -->
-          <div class="h-64 bg-slate-700 rounded-xl flex items-center justify-center">
-            <div class="text-center">
-              <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <p class="text-slate-300">Map integration can be added here</p>
-              <p class="text-slate-400 text-sm">{{ report.location_lat }}, {{ report.location_long }}</p>
+          <!-- Mapbox Map -->
+          <div 
+            ref="mapContainer" 
+            class="h-96 w-full rounded-xl overflow-hidden shadow-lg"
+            :class="{ 'bg-slate-700': !report.location_lat || !report.location_long }"
+          >
+            <div v-if="!report.location_lat || !report.location_long" class="h-full flex items-center justify-center">
+              <div class="text-center">
+                <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <p class="text-slate-300">Location coordinates were not provided for this incident.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -893,13 +936,14 @@ const downloadAttachment = (attachment: any) => {
         </div>
       </div>
     </div>
+
     <EscalationModal
       :report="report"
       :show="showEscalationModal"
       @close="closeEscalationModal"
       @escalated="onEscalated"
     />
-</AppLayout>
+  </AppLayout>
 </template>
 
 <style scoped>
@@ -923,5 +967,20 @@ const downloadAttachment = (attachment: any) => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+/* Mapbox specific styles */
+.mapboxgl-canvas {
+  border-radius: 0.75rem;
+}
+
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right {
+  display: none;
+}
+
+.mapboxgl-ctrl-top-right {
+  top: 10px;
+  right: 10px;
 }
 </style>
