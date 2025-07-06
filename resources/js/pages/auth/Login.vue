@@ -6,9 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Head, useForm } from '@inertiajs/vue3';
-import { AtSign, Lock, Loader2, Key, ShieldCheck, BuildingIcon, Mail, CheckCircle } from 'lucide-vue-next';
+import { AtSign, Lock, Loader2, Key, ShieldCheck, BuildingIcon, Mail, CheckCircle, AlarmCheck } from 'lucide-vue-next';
 import { ref, onMounted, computed } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import Dashboard from '../Dashboard.vue';
 
 defineProps<{
     status?: string;
@@ -35,27 +36,27 @@ const isSliding = ref(false);
 const features = [
     {
         icon: BuildingIcon,
-        title: "Business Dashboard",
-        description: "Access your business data in one centralized location.",
-        bgColor: "bg-teal-600",
-        cardColor: "bg-teal-800",
-        buttonGradient: "from-teal-500 to-teal-600"
+        title: "Incident Monitoring",
+        description: "Continuously scrape and identify HSSE incidents across public platforms.",
+        bgColor: "bg-green-600",
+        cardColor: "bg-green-800",
+        buttonGradient: "from-green-500 to-green-600"
+    },
+    {
+        icon: AlarmCheck,
+        title: "Real-Time Alerts",
+        description: "Receive immediate notifications on safety hazards or environmental spills.",
+        bgColor: "bg-orange-700",
+        cardColor: "bg-orange-800",
+        buttonGradient: "from-orange-600 to-orange-700"
     },
     {
         icon: ShieldCheck,
-        title: "Secure Access",
-        description: "Enterprise-grade security to protect your sensitive data.",
-        bgColor: "bg-cyan-600",
-        cardColor: "bg-cyan-800",
-        buttonGradient: "from-cyan-500 to-cyan-600"
-    },
-    {
-        icon: Key,
-        title: "Role-Based Permissions",
-        description: "Control who sees what with customizable access levels.",
-        bgColor: "bg-emerald-600",
-        cardColor: "bg-emerald-800",
-        buttonGradient: "from-emerald-500 to-emerald-600"
+        title: "Analytics Dashboard",
+        description: "Visualize HSSE trends, keywords and relevance scores in one central view.",
+        bgColor: "bg-blue-600",
+        cardColor: "bg-blue-800",
+        buttonGradient: "from-blue-500 to-blue-600"
     }
 ];
 
@@ -135,19 +136,19 @@ onMounted(() => {
 
                     <!-- Stats Block -->
                     <div class="w-full rounded-xl px-4 py-5 bg-white/10 space-y-4">
-                        <h4 class="font-semibold text-sm text-white/80">Trusted by businesses countrywide</h4>
+                        <h4 class="font-semibold text-sm text-white/80">HSSE Monitoring at a Glance</h4>
                         <div class="grid grid-cols-3 gap-4 text-center text-white">
                         <div>
-                            <div class="text-xl font-bold">500+</div>
-                            <div class="text-xs text-white/70">Happy clients</div>
+                            <div class="text-xl font-bold">1,200+</div>
+                            <div class="text-xs text-white/70">Incidents Tracked</div>
                         </div>
                         <div>
-                            <div class="text-xl font-bold">98%</div>
-                            <div class="text-xs text-white/70">Satisfaction rate</div>
+                            <div class="text-xl font-bold">350+</div>
+                            <div class="text-xs text-white/70">Alerts Sent</div>
                         </div>
                         <div>
-                            <div class="text-xl font-bold">24/7</div>
-                            <div class="text-xs text-white/70">Support</div>
+                            <div class="text-xl font-bold">5 min</div>
+                            <div class="text-xs text-white/70">Avg. Response Time</div>
                         </div>
                         </div>
                     </div>

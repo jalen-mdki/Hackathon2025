@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\TrainingController;
 use App\Http\Controllers\PublicReportController;
+use App\Http\Controllers\Api\ChatbotReportController;
+use App\Http\Controllers\Admin\AiScraperController;
 use App\Models\UserTraining;
 use App\Models\Report;
 use App\Models\Hazards;
@@ -17,9 +19,13 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
+
 // Public incident report routes (no authentication required)
 Route::get('/report-incident', [PublicReportController::class, 'index'])->name('report-incident.create');
 Route::post('/public-reports', [PublicReportController::class, 'store'])->name('public-report.store');
+
+Route::get('/ai-scrapers', [AiScraperController::class, 'index'])->name('ai-scrapers.index');
+Route::get('/ai-scrapers/filter', [AiScraperController::class, 'filter'])->name('ai-scrapers.filter');
 
 Route::get('dashboard', function () {
     // Existing queries...

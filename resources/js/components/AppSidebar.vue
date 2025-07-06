@@ -25,6 +25,11 @@ const mainNavItems: NavItem[] = [
         icon: ClipboardList
     },
     {
+        title: 'Proactive Monitoring',
+        href: '/ai-scrapers',
+        icon: ClipboardList
+    },
+    {
         title: 'Training',
         href: '/admin/trainings',
         icon: LucideGraduationCap
