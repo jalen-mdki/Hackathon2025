@@ -13,9 +13,9 @@ use App\Models\Hazards;
 // use DB;
 
 
-// Route::get('/', function () {
-//     return Inertia::render('Welcome');
-// })->name('home');
+Route::get('/', function () {
+    return Inertia::render('Welcome');
+})->name('home');
 
 // Public incident report routes (no authentication required)
 Route::get('/report-incident', [PublicReportController::class, 'index'])->name('report-incident.create');
