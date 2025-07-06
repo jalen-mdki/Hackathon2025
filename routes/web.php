@@ -6,13 +6,20 @@ use App\Http\Controllers\Admin\OrganizationController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\TrainingController;
+use App\Http\Controllers\PublicReportController;
 use App\Models\UserTraining;
 use App\Models\Report;
 use App\Models\Hazards;
+// use DB;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
-})->name('home');
+
+// Route::get('/', function () {
+//     return Inertia::render('Welcome');
+// })->name('home');
+
+// Public incident report routes (no authentication required)
+Route::get('/report-incident', [PublicReportController::class, 'index'])->name('report-incident.create');
+Route::post('/public-reports', [PublicReportController::class, 'store'])->name('public-report.store');
 
 Route::get('dashboard', function () {
     // Existing queries...
@@ -140,10 +147,10 @@ Route::middleware(['auth', 'verified', 'can:admin-access'])->prefix('admin')->na
     
     });
 
-    Route::get('escalations', [EscalationController::class, 'index'])->name('escalations.index');
-    Route::get('escalations/{escalation}', [EscalationController::class, 'show'])->name('escalations.show');
-    Route::post('escalations/{escalation}/assign', [EscalationController::class, 'assign'])->name('escalations.assign');
-    Route::post('escalations/{escalation}/update', [EscalationController::class, 'addUpdate'])->name('escalations.update');
+    // Route::get('escalations', [EscalationController::class, 'index'])->name('escalations.index');
+    // Route::get('escalations/{escalation}', [EscalationController::class, 'show'])->name('escalations.show');
+    // Route::post('escalations/{escalation}/assign', [EscalationController::class, 'assign'])->name('escalations.assign');
+    // Route::post('escalations/{escalation}/update', [EscalationController::class, 'addUpdate'])->name('escalations.update');
     Route::resource('users', UserController::class);
 
     Route::resource('trainings', TrainingController::class);
